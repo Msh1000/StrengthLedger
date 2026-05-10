@@ -14,6 +14,7 @@ export const defaultSettings: Settings = {
   notifications: false,
   colorTheme: 'purple',
   quickRestTimes: [30, 60, 90, 120, 180],
+  soundDuration: 0.8,
 }
 
 export const db = new Dexie('strengthlog') as Dexie & {

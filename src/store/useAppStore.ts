@@ -37,12 +37,12 @@ interface AppState {
   addExerciseToWorkout: (workoutId: string, exercise: Exercise, restSecondsOverride?: number) => Promise<void>
   addRoutineToWorkout: (workoutId: string, routineId: string, options?: { skipDuplicates?: boolean }) => Promise<void>
   deleteExercise: (workoutId: string, workoutExerciseId: string) => Promise<void>
-  reorderExercises: (workoutId: string, fromIndex: number, toIndex: number) => Promise<void>
   setExerciseRest: (workoutId: string, workoutExerciseId: string, seconds: number) => Promise<void>
   addSet: (workoutId: string, workoutExerciseId: string, set?: Partial<WorkoutSet>) => Promise<void>
   updateSet: (workoutId: string, workoutExerciseId: string, setId: string, patch: Partial<WorkoutSet>) => Promise<void>
   deleteSet: (workoutId: string, workoutExerciseId: string, setId: string) => Promise<void>
   toggleFavorite: (exerciseId: string) => Promise<void>
+  createCustomExercise: (exercise: Omit<Exercise, 'id'>) => Promise<void>
   saveRoutine: (routine: Routine) => Promise<void>
   deleteRoutine: (routineId: string) => Promise<void>
   startTimer: (seconds: number, exerciseName?: string, setLabel?: string) => void
@@ -234,15 +234,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }))
   },
 
-  reorderExercises: async (workoutId, fromIndex, toIndex) => {
-    await mutateWorkout(get, set, workoutId, (workout) => {
-      const exercises = [...workout.exercises]
-      const [removed] = exercises.splice(fromIndex, 1)
-      exercises.splice(toIndex, 0, removed)
-      return { ...workout, exercises }
-    })
-  },
-
   setExerciseRest: async (workoutId, workoutExerciseId, seconds) => {
     await mutateWorkout(get, set, workoutId, (workout) => ({
       ...workout,
@@ -311,6 +302,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const changed = exercises.find((exercise) => exercise.id === exerciseId)
     if (changed) await db.exercises.put(changed)
     set({ exercises })
+  },
+
+  createCustomExercise: async (exerciseData) => {
+    const exercise: Exercise = {
+      id: id(),
+      ...exerciseData,
+    }
+    await db.exercises.put(exercise)
+    set({ exercises: [...get().exercises, exercise] })
   },
 
   saveRoutine: async (routine) => {

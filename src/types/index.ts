@@ -85,6 +85,7 @@ export interface Settings {
   notifications: boolean
   colorTheme: ColorTheme
   quickRestTimes: number[]
+  soundDuration: number
 }
 
 export interface RestTimerState {

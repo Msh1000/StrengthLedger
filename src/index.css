@@ -373,6 +373,7 @@ button {
   width: 80px;
   height: 82px;
   opacity: 0.9;
+  display: none;
 }
 
 .athlete-silhouette span {
@@ -386,6 +387,16 @@ button {
     linear-gradient(250deg, transparent 0 18px, #b98b68 19px 25px, transparent 26px),
     linear-gradient(180deg, #29211f 20%, #8d6b56 58%, transparent 59%);
   filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.55));
+}
+
+.workout-hero-image {
+  position: absolute;
+  right: 20px;
+  top: 21px;
+  width: 80px;
+  height: 82px;
+  opacity: 0.85;
+  object-fit: contain;
 }
 
 /* ─── Buttons ─── */
@@ -733,55 +744,6 @@ button {
 .routine-stack {
   display: grid;
   gap: 12px;
-}
-
-.exercise-drag-wrapper {
-  position: relative;
-  cursor: move;
-  touch-action: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.exercise-drag-wrapper.dragging {
-  opacity: 0.5;
-  transform: scale(0.98);
-}
-
-.drag-handle {
-  position: absolute;
-  left: -8px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  background: rgba(148, 163, 184, 0.1);
-  border: 0;
-  border-radius: 8px;
-  width: 32px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  cursor: grab;
-  opacity: 0.6;
-  transition: opacity 0.2s ease, background 0.2s ease;
-}
-
-.drag-handle:active {
-  cursor: grabbing;
-}
-
-.drag-handle:hover {
-  opacity: 1;
-  background: rgba(148, 163, 184, 0.15);
-}
-
-@media (max-width: 640px) {
-  .drag-handle {
-    left: 2px;
-    width: 28px;
-    height: 42px;
-  }
 }
 
 /* ─── Exercise card ─── */

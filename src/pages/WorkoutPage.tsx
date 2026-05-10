@@ -1,4 +1,4 @@
-import { Dumbbell, GripVertical, ListPlus, Pencil, Plus, X } from 'lucide-react'
+import { Dumbbell, ListPlus, Pencil, Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { TopBar } from '../components/layout/TopBar'
@@ -16,7 +16,6 @@ export function WorkoutPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [routineSheetOpen, setRoutineSheetOpen] = useState(false)
   const [editingName, setEditingName] = useState(false)
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const workouts = useAppStore((state) => state.workouts)
   const exercises = useAppStore((state) => state.exercises)
   const routines = useAppStore((state) => state.routines)
@@ -25,7 +24,6 @@ export function WorkoutPage() {
   const renameWorkout = useAppStore((state) => state.renameWorkout)
   const completeWorkout = useAppStore((state) => state.completeWorkout)
   const deleteExercise = useAppStore((state) => state.deleteExercise)
-  const reorderExercises = useAppStore((state) => state.reorderExercises)
   const setExerciseRest = useAppStore((state) => state.setExerciseRest)
   const addSet = useAppStore((state) => state.addSet)
   const updateSet = useAppStore((state) => state.updateSet)
@@ -127,41 +125,17 @@ export function WorkoutPage() {
 
       <div className="exercise-stack">
         {workout.exercises.map((exercise, index) => (
-          <div
+          <ExerciseCard
             key={exercise.id}
-            draggable
-            className={`exercise-drag-wrapper ${draggedIndex === index ? 'dragging' : ''}`}
-            onDragStart={(e) => {
-              setDraggedIndex(index)
-              e.dataTransfer.effectAllowed = 'move'
-            }}
-            onDragEnd={() => setDraggedIndex(null)}
-            onDragOver={(e) => {
-              e.preventDefault()
-              e.dataTransfer.dropEffect = 'move'
-            }}
-            onDrop={(e) => {
-              e.preventDefault()
-              if (draggedIndex !== null && draggedIndex !== index) {
-                void reorderExercises(workout.id, draggedIndex, index)
-              }
-              setDraggedIndex(null)
-            }}
-          >
-            <button className="drag-handle" type="button" aria-label="Drag to reorder">
-              <GripVertical size={18} />
-            </button>
-            <ExerciseCard
-              exercise={exercise}
-              index={index}
-              onAddSet={() => void addSet(workout.id, exercise.id)}
-              onCopySet={() => void addSet(workout.id, exercise.id, exercise.sets.at(-1))}
-              onDeleteExercise={() => void deleteExercise(workout.id, exercise.id)}
-              onUpdateSet={(setId, patch) => void updateSet(workout.id, exercise.id, setId, patch)}
-              onDeleteSet={(setId) => void deleteSet(workout.id, exercise.id, setId)}
-              onChangeRest={(seconds) => void setExerciseRest(workout.id, exercise.id, seconds)}
-            />
-          </div>
+            exercise={exercise}
+            index={index}
+            onAddSet={() => void addSet(workout.id, exercise.id)}
+            onCopySet={() => void addSet(workout.id, exercise.id, exercise.sets.at(-1))}
+            onDeleteExercise={() => void deleteExercise(workout.id, exercise.id)}
+            onUpdateSet={(setId, patch) => void updateSet(workout.id, exercise.id, setId, patch)}
+            onDeleteSet={(setId) => void deleteSet(workout.id, exercise.id, setId)}
+            onChangeRest={(seconds) => void setExerciseRest(workout.id, exercise.id, seconds)}
+          />
         ))}
       </div>
 

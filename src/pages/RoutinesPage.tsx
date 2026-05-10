@@ -23,7 +23,7 @@ export function RoutinesPage() {
   }
 
   const startEdit = (routine: Routine) => {
-    setDraft({ ...routine, exercises: [...routine.exercises] })
+    setDraft({ ...routine, exercises: [...(routine.exercises ?? [])] })
     setEditorOpen(true)
   }
 
@@ -56,12 +56,12 @@ export function RoutinesPage() {
             <Button onClick={startCreate}><Plus size={16} /> New Routine</Button>
           </GlassCard>
         ) : null}
-        {routines.map((routine) => (
+         {routines.map((routine) => (
           <GlassCard className="routine-card" key={routine.id}>
             <div className="routine-title">
               <div>
                 <h2>{routine.name}</h2>
-                <p>{routine.exercises.length} exercises</p>
+                <p>{(routine.exercises ?? []).length} exercises</p>
               </div>
               <div className="routine-icons">
                 <button className="icon-button compact" type="button" onClick={() => startEdit(routine)} aria-label="Edit routine">
@@ -72,7 +72,7 @@ export function RoutinesPage() {
                 </button>
               </div>
             </div>
-            {routine.exercises.slice(0, 4).map((entry, index) => {
+            {(routine.exercises ?? []).slice(0, 4).map((entry, index) => {
               const exercise = exerciseLookup[entry.exerciseId]
               return (
                 <div className="routine-day" key={`${entry.exerciseId}-${index}`}>
@@ -81,8 +81,8 @@ export function RoutinesPage() {
                 </div>
               )
             })}
-            {routine.exercises.length > 4 ? (
-              <div className="routine-day"><span>+{routine.exercises.length - 4} more</span></div>
+            {(routine.exercises ?? []).length > 4 ? (
+              <div className="routine-day"><span>+{(routine.exercises ?? []).length - 4} more</span></div>
             ) : null}
           </GlassCard>
         ))}
