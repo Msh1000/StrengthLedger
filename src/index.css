@@ -202,6 +202,7 @@ button {
   align-items: center;
   justify-content: space-between;
   min-height: 44px;
+  
 }
 
 .top-bar-spacer {
@@ -391,14 +392,18 @@ button {
 
 .workout-hero-image {
   position: absolute;
-  right: 20px;
-  top: 21px;
-  width: 80px;
-  height: 82px;
-  opacity: 0.85;
-  object-fit: contain;
-}
+  right: 16px;
+  top: 16px;
 
+  width: 96px;
+  height: 96px;
+
+  object-fit: cover;
+  border-radius: 16px;
+
+  opacity: 1;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
 /* ─── Buttons ─── */
 .btn {
   min-height: 48px;

@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button'
 import { useAppStore } from '../store/useAppStore'
 import { primeAudio } from '../utils/notifications'
 import { bestOneRepMax, completedSets, formatDuration, formatWeight, workoutVolume } from '../utils/calculations'
+import workoutHero from "../assets/workout-hero.png";
 
 export function TodayPage() {
   const navigate = useNavigate()
@@ -96,11 +97,11 @@ export function TodayPage() {
             : 'Tap below to start a focused training day'}
           </p>
         </div>
-        <img 
-          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect fill='%23374151' width='200' height='200'/%3E%3Ccircle cx='100' cy='60' r='25' fill='%239CA3AF'/%3E%3Crect x='75' y='95' width='50' height='60' fill='%239CA3AF'/%3E%3Crect x='60' y='100' width='20' height='55' fill='%239CA3AF'/%3E%3Crect x='120' y='100' width='20' height='55' fill='%239CA3AF'/%3E%3Crect x='70' y='160' width='15' height='35' fill='%239CA3AF'/%3E%3Crect x='115' y='160' width='15' height='35' fill='%239CA3AF'/%3E%3C/svg%3E"
+         <img
+          src={workoutHero}
           alt="Workout"
           className="workout-hero-image"
-        />
+          />
         <Button onClick={openWorkout}>
           {buttonLabel} <Play size={16} fill="currentColor" />
         </Button>
