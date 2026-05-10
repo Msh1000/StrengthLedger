@@ -7,7 +7,7 @@ import { MiniLineChart } from '../components/charts/MiniLineChart'
 import { GlassCard } from '../components/ui/GlassCard'
 import { StatCard } from '../components/ui/StatCard'
 import { useAppStore } from '../store/useAppStore'
-import { bestOneRepMax, completedSets, estimatedOneRepMax, formatDuration, formatWeight, workoutVolume } from '../utils/calculations'
+import { bestOneRepMax, completedSets, estimatedOneRepMax, formatDuration, formatWeight, toNumber, workoutVolume } from '../utils/calculations'
 
 type Tab = 'overview' | 'history' | 'prs'
 
@@ -22,16 +22,16 @@ export function ProgressPage() {
 
   const prList = workouts
     .flatMap((workout) =>
-      workout.exercises.flatMap((exercise) =>
-        exercise.sets
-          .filter((set) => set.completed && set.weight > 0 && set.reps > 0)
+          workout.exercises.flatMap((exercise) =>
+            exercise.sets
+          .filter((set) => set.completed && toNumber(set.weight) > 0 && toNumber(set.reps) > 0)
           .map((set) => ({
             id: `${workout.id}-${exercise.id}-${set.id}`,
             date: workout.date,
             exerciseName: exercise.name,
-            weight: set.weight,
-            reps: set.reps,
-            orm: estimatedOneRepMax(set.weight, set.reps),
+            weight: toNumber(set.weight),
+            reps: toNumber(set.reps),
+            orm: estimatedOneRepMax(toNumber(set.weight), toNumber(set.reps)),
           })),
       ),
     )

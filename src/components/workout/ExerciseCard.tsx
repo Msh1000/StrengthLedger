@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import { GlassCard } from '../ui/GlassCard'
 import { SetRow } from './SetRow'
 import type { WorkoutExercise, WorkoutSet } from '../../types'
-import { detectSetPr, estimatedOneRepMax, exerciseVolume, formatWeight } from '../../utils/calculations'
+import { detectSetPr, estimatedOneRepMax, exerciseVolume, formatWeight, toNumber } from '../../utils/calculations'
 
 interface ExerciseCardProps {
   exercise: WorkoutExercise
@@ -34,9 +34,11 @@ export function ExerciseCard({
   const completed = exercise.sets.filter((set) => set.completed)
   const bestSet = completed.reduce<WorkoutSet | undefined>((best, set) => {
     if (!best) return set
-    return estimatedOneRepMax(set.weight, set.reps) > estimatedOneRepMax(best.weight, best.reps) ? set : best
+    return estimatedOneRepMax(toNumber(set.weight), toNumber(set.reps)) > estimatedOneRepMax(toNumber(best.weight), toNumber(best.reps))
+      ? set
+      : best
   }, undefined)
-  const bestOrm = bestSet ? estimatedOneRepMax(bestSet.weight, bestSet.reps) : 0
+  const bestOrm = bestSet ? estimatedOneRepMax(toNumber(bestSet.weight), toNumber(bestSet.reps)) : 0
 
   const applyRest = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds <= 0) return

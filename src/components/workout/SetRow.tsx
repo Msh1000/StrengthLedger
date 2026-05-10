@@ -23,11 +23,16 @@ export function SetRow({ index, set, onChange, onDelete }: SetRowProps) {
       </select>
       <input
         inputMode="decimal"
-        value={set.weight}
-        onChange={(event) => onChange({ weight: Number(event.target.value) })}
+        value={set.weight === '' ? '' : String(set.weight)}
+        onChange={(event) => onChange({ weight: event.target.value === '' ? '' : Number(event.target.value) })}
         aria-label="Weight"
       />
-      <input inputMode="numeric" value={set.reps} onChange={(event) => onChange({ reps: Number(event.target.value) })} aria-label="Reps" />
+      <input
+        inputMode="numeric"
+        value={set.reps === '' ? '' : String(set.reps)}
+        onChange={(event) => onChange({ reps: event.target.value === '' ? '' : Number(event.target.value) })}
+        aria-label="Reps"
+      />
       <button className="done-toggle" type="button" onClick={() => onChange({ completed: !set.completed })} aria-label="Toggle completed">
         {set.completed ? <Check size={15} strokeWidth={3} /> : null}
       </button>

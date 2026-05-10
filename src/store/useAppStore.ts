@@ -17,6 +17,7 @@ import type {
 
 const todayKey = () => formatISO(new Date(), { representation: 'date' })
 const id = () => crypto.randomUUID()
+const seededExerciseIds = new Set(exerciseLibrary.map((exercise) => exercise.id))
 
 interface AppState {
   booted: boolean
@@ -34,6 +35,7 @@ interface AppState {
   createWorkoutForDate: (date: string, opts?: { name?: string; routineId?: string }) => Promise<Workout>
   renameWorkout: (workoutId: string, name: string) => Promise<void>
   completeWorkout: (workoutId: string) => Promise<void>
+  deleteWorkout: (workoutId: string) => Promise<void>
   addExerciseToWorkout: (workoutId: string, exercise: Exercise, restSecondsOverride?: number) => Promise<void>
   addRoutineToWorkout: (workoutId: string, routineId: string, options?: { skipDuplicates?: boolean }) => Promise<void>
   deleteExercise: (workoutId: string, workoutExerciseId: string) => Promise<void>
@@ -42,7 +44,8 @@ interface AppState {
   updateSet: (workoutId: string, workoutExerciseId: string, setId: string, patch: Partial<WorkoutSet>) => Promise<void>
   deleteSet: (workoutId: string, workoutExerciseId: string, setId: string) => Promise<void>
   toggleFavorite: (exerciseId: string) => Promise<void>
-  createCustomExercise: (exercise: Omit<Exercise, 'id'>) => Promise<void>
+  createCustomExercise: (exercise: Omit<Exercise, 'id'>) => Promise<Exercise>
+  deleteCustomExercise: (exerciseId: string) => Promise<void>
   saveRoutine: (routine: Routine) => Promise<void>
   deleteRoutine: (routineId: string) => Promise<void>
   startTimer: (seconds: number, exerciseName?: string, setLabel?: string) => void
@@ -179,6 +182,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     })
   },
 
+  deleteWorkout: async (workoutId) => {
+    await db.workouts.delete(workoutId)
+    set({ workouts: get().workouts.filter((workout) => workout.id !== workoutId) })
+  },
+
   addExerciseToWorkout: async (workoutId, exercise, restSecondsOverride) => {
     const workoutExercise = buildWorkoutExerciseFromTemplate(exercise)
     if (typeof restSecondsOverride === 'number') {
@@ -311,6 +319,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     await db.exercises.put(exercise)
     set({ exercises: [...get().exercises, exercise] })
+    return exercise
+  },
+
+  deleteCustomExercise: async (exerciseId) => {
+    if (seededExerciseIds.has(exerciseId)) return
+    await db.exercises.delete(exerciseId)
+
+    const originalRoutines = get().routines
+    const nextExercises = get().exercises.filter((exercise) => exercise.id !== exerciseId)
+    const nextRoutines = originalRoutines.map((routine) =>
+      routine.exercises.some((template) => template.exerciseId === exerciseId)
+        ? { ...routine, exercises: routine.exercises.filter((template) => template.exerciseId !== exerciseId) }
+        : routine,
+    )
+
+    await Promise.all(
+      nextRoutines
+        .filter((routine, index) => routine !== originalRoutines[index])
+        .map((routine) => db.routines.put(routine)),
+    )
+
+    set({ exercises: nextExercises, routines: nextRoutines })
   },
 
   saveRoutine: async (routine) => {

@@ -23,8 +23,8 @@ export interface Exercise {
 export interface WorkoutSet {
   id: string
   type: SetType
-  weight: number
-  reps: number
+  weight: number | ''
+  reps: number | ''
   completed: boolean
   createdAt: string
 }

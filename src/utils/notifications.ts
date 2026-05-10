@@ -67,47 +67,32 @@ export const primeAudio = () => {
   }
 }
 
-export const safePlayBeep = (duration: number = 0.8) => {
+export const safePlayBeep = (duration: number = 2, gapSeconds: number = 1) => {
   try {
     const ctx = getAudio()
     if (!ctx) return
     if (ctx.state === 'suspended') void ctx.resume()
-    
+
     const now = ctx.currentTime
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    
-    osc.type = 'sine'
-    osc.frequency.value = 880
-    
-    gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(0.3, now + 0.05)
-    
-    const beepDuration = duration
-    
-    gain.gain.setValueAtTime(0.3, now + 0.05)
-    gain.gain.exponentialRampToValueAtTime(0.3, now + beepDuration)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + beepDuration + 0.1)
-    
-    osc.connect(gain).connect(ctx.destination)
-    osc.start(now)
-    osc.stop(now + beepDuration + 0.1)
-    
-    const osc2 = ctx.createOscillator()
-    const gain2 = ctx.createGain()
-    osc2.type = 'sine'
-    osc2.frequency.value = 1100
-    
-    const delay = 0.5
-    gain2.gain.setValueAtTime(0.0001, now + delay)
-    gain2.gain.exponentialRampToValueAtTime(0.3, now + delay + 0.05)
-    gain2.gain.setValueAtTime(0.3, now + delay + 0.05)
-    gain2.gain.exponentialRampToValueAtTime(0.3, now + delay + beepDuration)
-    gain2.gain.exponentialRampToValueAtTime(0.0001, now + delay + beepDuration + 0.1)
-    
-    osc2.connect(gain2).connect(ctx.destination)
-    osc2.start(now + delay)
-    osc2.stop(now + delay + beepDuration + 0.1)
+    const playTone = (startTime: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.type = 'sine'
+      osc.frequency.value = 880
+
+      gain.gain.setValueAtTime(0.0001, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.3, startTime + 0.05)
+      gain.gain.setValueAtTime(0.3, startTime + Math.max(0.05, duration - 0.08))
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration)
+
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(startTime)
+      osc.stop(startTime + duration + 0.05)
+    }
+
+    playTone(now)
+    playTone(now + duration + gapSeconds)
   } catch {
     // ignore
   }
@@ -121,7 +106,7 @@ export interface RestCompleteOptions {
 
 export const notifyRestComplete = (exerciseName?: string, options: RestCompleteOptions = {}) => {
   if (options.vibration) safeVibrate([200, 100, 200, 100, 200])
-  if (options.sound) safePlayBeep()
+  if (options.sound) safePlayBeep(2, 1)
   if (options.notifications) {
     safeNotify('Rest complete', exerciseName ? `Ready for ${exerciseName}` : 'Time for your next set.')
   }

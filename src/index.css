@@ -949,6 +949,18 @@ button {
   background: transparent;
 }
 
+.library-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.danger-icon {
+  color: var(--red);
+  background: rgba(255, 79, 100, 0.08);
+}
+
 /* ─── Exercise picker ─── */
 .picker-panel {
   margin-bottom: 14px;
@@ -1045,7 +1057,7 @@ button {
   min-height: 62px;
   width: 100%;
   display: grid;
-  grid-template-columns: 38px 1fr 38px;
+  grid-template-columns: 38px 1fr auto;
   gap: 10px;
   align-items: center;
   padding: 10px 12px;

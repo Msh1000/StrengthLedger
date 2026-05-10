@@ -28,6 +28,7 @@ export function WorkoutPage() {
   const addSet = useAppStore((state) => state.addSet)
   const updateSet = useAppStore((state) => state.updateSet)
   const deleteSet = useAppStore((state) => state.deleteSet)
+  const deleteWorkout = useAppStore((state) => state.deleteWorkout)
   const workout = workouts.find((item) => item.id === id)
 
   const volumeTrend = useMemo(() => [72, 78, 84, 88, 96, Math.max(98, bestOneRepMax(workout))], [workout])
@@ -48,6 +49,12 @@ export function WorkoutPage() {
   const handlePickRoutine = async (routineId: string) => {
     await addRoutineToWorkout(workout.id, routineId)
     setRoutineSheetOpen(false)
+  }
+
+  const handleDeleteWorkout = async () => {
+    if (!confirm(`Delete workout "${workout.name}"? This cannot be undone.`)) return
+    await deleteWorkout(workout.id)
+    navigate('/')
   }
 
   return (
@@ -147,6 +154,9 @@ export function WorkoutPage() {
         }
       }}>
         {workout.completed ? 'View Workout' : 'Finish Workout'}
+      </Button>
+      <Button variant="danger" className="full-width" style={{ marginTop: '10px' }} onClick={() => void handleDeleteWorkout()}>
+        Delete Workout
       </Button>
 
       {routineSheetOpen ? (

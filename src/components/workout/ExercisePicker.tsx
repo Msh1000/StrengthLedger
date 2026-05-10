@@ -1,4 +1,4 @@
-import { Dumbbell, Search, Star } from 'lucide-react'
+import { Dumbbell, Plus, Search, Star } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '../ui/Button'
 import { muscleGroups } from '../../data/exercises'
@@ -7,9 +7,10 @@ import type { Exercise, MuscleGroup } from '../../types'
 interface ExercisePickerProps {
   exercises: Exercise[]
   onPick: (exercise: Exercise) => void
+  onCreateNewExercise?: () => void
 }
 
-export function ExercisePicker({ exercises, onPick }: ExercisePickerProps) {
+export function ExercisePicker({ exercises, onPick, onCreateNewExercise }: ExercisePickerProps) {
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState<(typeof muscleGroups)[number]>('All')
 
@@ -55,6 +56,11 @@ export function ExercisePicker({ exercises, onPick }: ExercisePickerProps) {
           </div>
         ) : null}
       </div>
+      {onCreateNewExercise ? (
+        <Button variant="outline" className="full-width" onClick={onCreateNewExercise}>
+          <Plus size={18} /> Create New Exercise
+        </Button>
+      ) : null}
       <Button variant="ghost" className="full-width" onClick={() => setQuery('')}>
         Clear Search
       </Button>

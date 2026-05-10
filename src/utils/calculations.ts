@@ -2,8 +2,10 @@ import type { Workout, WorkoutExercise, WorkoutSet } from '../types'
 
 const volumeTypes = new Set(['working', 'drop', 'failure'])
 
+export const toNumber = (value: number | '') => (value === '' ? 0 : value)
+
 export const setVolume = (set: WorkoutSet) =>
-  set.completed && volumeTypes.has(set.type) ? set.weight * set.reps : 0
+  set.completed && volumeTypes.has(set.type) ? toNumber(set.weight) * toNumber(set.reps) : 0
 
 export const estimatedOneRepMax = (weight: number, reps: number) =>
   Math.round(weight * (1 + reps / 30) * 10) / 10
@@ -21,8 +23,10 @@ export const bestOneRepMax = (workout?: Workout) => {
   if (!workout) return 0
   return workout.exercises.reduce((best, exercise) => {
     const exerciseBest = exercise.sets.reduce((setBest, set) => {
-      if (!set.completed || set.reps <= 0 || set.weight <= 0) return setBest
-      return Math.max(setBest, estimatedOneRepMax(set.weight, set.reps))
+      const weight = toNumber(set.weight)
+      const reps = toNumber(set.reps)
+      if (!set.completed || reps <= 0 || weight <= 0) return setBest
+      return Math.max(setBest, estimatedOneRepMax(weight, reps))
     }, 0)
     return Math.max(best, exerciseBest)
   }, 0)
@@ -41,9 +45,9 @@ export const formatDuration = (seconds: number) => {
 
 export const detectSetPr = (exercise: WorkoutExercise, set: WorkoutSet) => {
   if (!set.completed) return false
-  const currentMax = estimatedOneRepMax(set.weight, set.reps)
+  const currentMax = estimatedOneRepMax(toNumber(set.weight), toNumber(set.reps))
   const previousBest = exercise.sets
     .filter((candidate) => candidate.id !== set.id && candidate.completed)
-    .reduce((best, candidate) => Math.max(best, estimatedOneRepMax(candidate.weight, candidate.reps)), 0)
+    .reduce((best, candidate) => Math.max(best, estimatedOneRepMax(toNumber(candidate.weight), toNumber(candidate.reps))), 0)
   return currentMax >= previousBest && currentMax > 0
 }

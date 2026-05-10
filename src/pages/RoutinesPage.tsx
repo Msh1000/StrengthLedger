@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { TopBar } from '../components/layout/TopBar'
 import { Button } from '../components/ui/Button'
 import { GlassCard } from '../components/ui/GlassCard'
+import { ExerciseCreatorSheet, type ExerciseDraft } from '../components/workout/ExerciseCreatorSheet'
 import { ExercisePicker } from '../components/workout/ExercisePicker'
 import { useAppStore, newRoutineId } from '../store/useAppStore'
 import type { Routine } from '../types'
@@ -113,6 +114,8 @@ interface RoutineEditorProps {
 
 function RoutineEditor({ draft, setDraft, onCancel, onSave, exerciseLookup, allExercises }: RoutineEditorProps) {
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [creatorOpen, setCreatorOpen] = useState(false)
+  const createCustomExercise = useAppStore((state) => state.createCustomExercise)
 
   const update = (patch: Partial<Routine>) => setDraft({ ...draft, ...patch })
 
@@ -133,6 +136,20 @@ function RoutineEditor({ draft, setDraft, onCancel, onSave, exerciseLookup, allE
   const editEntry = (index: number, patch: Partial<Routine['exercises'][number]>) => {
     const next = draft.exercises.map((entry, i) => (i === index ? { ...entry, ...patch } : entry))
     update({ exercises: next })
+  }
+
+  const handleCreateExercise = async (exercise: ExerciseDraft) => {
+    if (!exercise.name.trim()) return
+    const created = await createCustomExercise({
+      name: exercise.name.trim(),
+      muscleGroup: exercise.muscleGroup,
+      equipment: exercise.equipment,
+      defaultRestSeconds: exercise.defaultRestSeconds,
+    })
+    update({
+      exercises: [...draft.exercises, { exerciseId: created.id, sets: 3, reps: 8, weight: 20 }],
+    })
+    setCreatorOpen(false)
   }
 
   return (
@@ -164,6 +181,19 @@ function RoutineEditor({ draft, setDraft, onCancel, onSave, exerciseLookup, allE
               update({ exercises: [...draft.exercises, { exerciseId: exercise.id, sets: 3, reps: 8, weight: 20 }] })
               setPickerOpen(false)
             }}
+            onCreateNewExercise={() => {
+              setPickerOpen(false)
+              setCreatorOpen(true)
+            }}
+          />
+        ) : null}
+        {creatorOpen ? (
+          <ExerciseCreatorSheet
+            open={creatorOpen}
+            title="Create New Exercise"
+            confirmLabel="Add to Routine"
+            onCancel={() => setCreatorOpen(false)}
+            onSubmit={(exercise) => void handleCreateExercise(exercise)}
           />
         ) : null}
         <div className="routine-edit-list">

@@ -1,26 +1,22 @@
-import { Plus, Search, Star, X } from 'lucide-react'
+import { Plus, Search, Star, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { TopBar } from '../components/layout/TopBar'
 import { Button } from '../components/ui/Button'
-import { muscleGroups } from '../data/exercises'
+import { exerciseLibrary, muscleGroups } from '../data/exercises'
 import { useAppStore } from '../store/useAppStore'
+import { ExerciseCreatorSheet } from '../components/workout/ExerciseCreatorSheet'
 import type { MuscleGroup } from '../types'
-
-const EQUIPMENT_OPTIONS = ['Barbell', 'Dumbbell', 'Machine', 'Cable', 'Bodyweight', 'Kettlebell', 'Resistance Band', 'Smith Machine']
 
 export function ExercisesPage() {
   const exercises = useAppStore((state) => state.exercises)
   const toggleFavorite = useAppStore((state) => state.toggleFavorite)
   const createCustomExercise = useAppStore((state) => state.createCustomExercise)
+  const deleteCustomExercise = useAppStore((state) => state.deleteCustomExercise)
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState<(typeof muscleGroups)[number]>('All')
   const [creatorOpen, setCreatorOpen] = useState(false)
-  const [formData, setFormData] = useState({
-    name: '',
-    muscleGroup: 'Chest' as MuscleGroup,
-    equipment: 'Dumbbell',
-    defaultRestSeconds: 90,
-  })
+
+  const seededExerciseIds = useMemo(() => new Set(exerciseLibrary.map((exercise) => exercise.id)), [])
 
   const filtered = useMemo(
     () =>
@@ -34,16 +30,20 @@ export function ExercisesPage() {
     [exercises, group, query],
   )
 
-  const handleCreateExercise = async () => {
-    if (!formData.name.trim()) return
+  const handleCreateExercise = async (exercise: { name: string; muscleGroup: MuscleGroup; equipment: string; defaultRestSeconds: number }) => {
+    if (!exercise.name.trim()) return
     await createCustomExercise({
-      name: formData.name.trim(),
-      muscleGroup: formData.muscleGroup,
-      equipment: formData.equipment,
-      defaultRestSeconds: formData.defaultRestSeconds,
+      name: exercise.name.trim(),
+      muscleGroup: exercise.muscleGroup,
+      equipment: exercise.equipment,
+      defaultRestSeconds: exercise.defaultRestSeconds,
     })
-    setFormData({ name: '', muscleGroup: 'Chest', equipment: 'Dumbbell', defaultRestSeconds: 90 })
     setCreatorOpen(false)
+  }
+
+  const handleDeleteExercise = async (exerciseId: string, exerciseName: string) => {
+    if (!confirm(`Delete "${exerciseName}"? This will remove it from your routines.`)) return
+    await deleteCustomExercise(exerciseId)
   }
 
   return (
@@ -66,18 +66,40 @@ export function ExercisesPage() {
         ))}
       </div>
       <div className="library-list">
-        {filtered.map((exercise) => (
-          <div className="library-row" key={exercise.id}>
-            <span className="exercise-glyph">{exercise.name.slice(0, 1)}</span>
-            <div className="library-text">
-              <strong>{exercise.name}</strong>
-              <small>{exercise.equipment} - {exercise.muscleGroup}</small>
+        {filtered.map((exercise) => {
+          const isSeeded = seededExerciseIds.has(exercise.id)
+          return (
+            <div className="library-row" key={exercise.id}>
+              <span className="exercise-glyph">{exercise.name.slice(0, 1)}</span>
+              <div className="library-text">
+                <strong>{exercise.name}</strong>
+                <small>
+                  {exercise.equipment} - {exercise.muscleGroup}
+                </small>
+              </div>
+              <div className="library-actions">
+                <button
+                  className="icon-button compact"
+                  type="button"
+                  onClick={() => void toggleFavorite(exercise.id)}
+                  aria-label="Toggle favorite"
+                >
+                  <Star size={19} className={exercise.favorite ? 'star' : ''} fill={exercise.favorite ? 'currentColor' : 'none'} />
+                </button>
+                {!isSeeded ? (
+                  <button
+                    className="icon-button compact danger-icon"
+                    type="button"
+                    onClick={() => void handleDeleteExercise(exercise.id, exercise.name)}
+                    aria-label="Delete custom exercise"
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                ) : null}
+              </div>
             </div>
-            <button className="icon-button compact" type="button" onClick={() => void toggleFavorite(exercise.id)} aria-label="Toggle favorite">
-              <Star size={19} className={exercise.favorite ? 'star' : ''} fill={exercise.favorite ? 'currentColor' : 'none'} />
-            </button>
-          </div>
-        ))}
+          )
+        })}
         {filtered.length === 0 ? (
           <div className="library-row" style={{ gridTemplateColumns: '1fr' }}>
             <small>No exercises match your filters.</small>
@@ -86,56 +108,13 @@ export function ExercisesPage() {
       </div>
 
       {creatorOpen ? (
-        <div className="bottom-sheet-backdrop" onClick={() => setCreatorOpen(false)}>
-          <div className="bottom-sheet" onClick={(event) => event.stopPropagation()}>
-            <div className="sheet-head">
-              <h3>Create Custom Exercise</h3>
-              <button className="icon-button compact" type="button" onClick={() => setCreatorOpen(false)} aria-label="Close">
-                <X size={18} />
-              </button>
-            </div>
-            <label className="sheet-label">Exercise name</label>
-            <input
-              className="sheet-input"
-              value={formData.name}
-              onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-              placeholder="e.g. Cable Flyes"
-            />
-            <label className="sheet-label">Muscle Group</label>
-            <select
-              className="sheet-input"
-              value={formData.muscleGroup}
-              onChange={(event) => setFormData({ ...formData, muscleGroup: event.target.value as MuscleGroup })}
-            >
-              {(['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'] as MuscleGroup[]).map((mg) => (
-                <option key={mg} value={mg}>{mg}</option>
-              ))}
-            </select>
-            <label className="sheet-label">Equipment</label>
-            <select
-              className="sheet-input"
-              value={formData.equipment}
-              onChange={(event) => setFormData({ ...formData, equipment: event.target.value })}
-            >
-              {EQUIPMENT_OPTIONS.map((eq) => (
-                <option key={eq} value={eq}>{eq}</option>
-              ))}
-            </select>
-            <label className="sheet-label">Default Rest Time (seconds)</label>
-            <input
-              type="number"
-              className="sheet-input"
-              min={5}
-              max={600}
-              value={formData.defaultRestSeconds}
-              onChange={(event) => setFormData({ ...formData, defaultRestSeconds: Number(event.target.value) })}
-            />
-            <div className="sheet-footer">
-              <Button variant="ghost" onClick={() => setCreatorOpen(false)}>Cancel</Button>
-              <Button onClick={() => void handleCreateExercise()}>Create Exercise</Button>
-            </div>
-          </div>
-        </div>
+        <ExerciseCreatorSheet
+          open={creatorOpen}
+          title="Create Custom Exercise"
+          confirmLabel="Create Exercise"
+          onCancel={() => setCreatorOpen(false)}
+          onSubmit={(exercise) => void handleCreateExercise(exercise)}
+        />
       ) : null}
     </div>
   )

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { RestTimer } from '../timer/RestTimer'
@@ -13,6 +13,7 @@ export function AppShell() {
   const tickTimer = useAppStore((state) => state.tickTimer)
   const timer = useAppStore((state) => state.timer)
   const settings = useAppStore((state) => state.settings)
+  const restCompleteAnnounced = useRef(false)
 
   useEffect(() => {
     void boot()
@@ -24,12 +25,18 @@ export function AppShell() {
   }, [tickTimer])
 
   useEffect(() => {
-    if (timer.totalSeconds > 0 && timer.secondsLeft === 0 && !timer.active) {
+    if (timer.active || timer.secondsLeft > 0) {
+      restCompleteAnnounced.current = false
+      return
+    }
+
+    if (timer.totalSeconds > 0 && timer.secondsLeft === 0 && !restCompleteAnnounced.current) {
       notifyRestComplete(timer.exerciseName, {
         sound: settings.sound,
         vibration: settings.vibration,
         notifications: settings.notifications,
       })
+      restCompleteAnnounced.current = true
     }
   }, [timer.active, timer.exerciseName, timer.secondsLeft, timer.totalSeconds, settings.sound, settings.vibration, settings.notifications])
 
