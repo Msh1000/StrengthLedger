@@ -20,8 +20,8 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
     <svg className="mini-chart" viewBox="0 0 100 90" role="img" aria-label="Progress line chart">
       <defs>
         <linearGradient id="chartLine" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="#a855f7" />
-          <stop offset="100%" stopColor="#38bdf8" />
+          <stop offset="0%" stopColor="var(--accent)" />
+          <stop offset="100%" stopColor="var(--accent-2)" />
         </linearGradient>
       </defs>
       {[20, 40, 60, 80].map((y) => (

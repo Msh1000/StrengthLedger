@@ -1,5 +1,4 @@
 import { Check, Trash2 } from 'lucide-react'
-import { useSwipeable } from 'react-swipeable'
 import type { SetType, WorkoutSet } from '../../types'
 
 const setTypes: SetType[] = ['working', 'warmup', 'rest', 'drop', 'failure']
@@ -12,13 +11,8 @@ interface SetRowProps {
 }
 
 export function SetRow({ index, set, onChange, onDelete }: SetRowProps) {
-  const handlers = useSwipeable({
-    onSwipedLeft: onDelete,
-    trackTouch: true,
-  })
-
   return (
-    <div className={`set-row ${set.completed ? 'complete' : ''}`} {...handlers}>
+    <div className={`set-row ${set.completed ? 'complete' : ''}`}>
       <span className="set-index">{index + 1}</span>
       <select value={set.type} onChange={(event) => onChange({ type: event.target.value as SetType })} aria-label="Set type">
         {setTypes.map((type) => (

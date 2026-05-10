@@ -1,24 +1,33 @@
 import { addMonths, eachDayOfInterval, endOfMonth, format, formatISO, startOfMonth } from 'date-fns'
 import { ChevronLeft, ChevronRight, Flame } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useSwipeable } from 'react-swipeable'
+import { useNavigate } from 'react-router-dom'
 import { TopBar } from '../components/layout/TopBar'
 import { GlassCard } from '../components/ui/GlassCard'
 import { useAppStore } from '../store/useAppStore'
 import { completedSets, formatDuration, formatWeight, workoutVolume } from '../utils/calculations'
 
 export function CalendarPage() {
+  const navigate = useNavigate()
   const [month, setMonth] = useState(new Date())
   const workouts = useAppStore((state) => state.workouts)
   const setSelectedDate = useAppStore((state) => state.setSelectedDate)
   const selectedDate = useAppStore((state) => state.selectedDate)
-  const handlers = useSwipeable({ onSwipedLeft: () => setMonth(addMonths(month, 1)), onSwipedRight: () => setMonth(addMonths(month, -1)), trackTouch: true })
   const days = useMemo(() => eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) }), [month])
   const selectedWorkout = workouts.find((workout) => workout.date === selectedDate)
 
+  const handleDayPick = (key: string) => {
+    setSelectedDate(key)
+  }
+
+  const goToWorkout = () => {
+    if (selectedWorkout) navigate(`/workout/${selectedWorkout.id}`)
+    else navigate('/')
+  }
+
   return (
-    <div className="screen" {...handlers}>
-      <TopBar title={format(month, 'MMMM yyyy')} back />
+    <div className="screen">
+      <TopBar title={format(month, 'MMMM yyyy')} />
       <div className="month-controls">
         <button className="icon-button" type="button" onClick={() => setMonth(addMonths(month, -1))} aria-label="Previous month">
           <ChevronLeft size={21} />
@@ -39,7 +48,7 @@ export function CalendarPage() {
             const key = formatISO(day, { representation: 'date' })
             const workout = workouts.find((item) => item.date === key)
             return (
-              <button className={`calendar-day ${key === selectedDate ? 'active' : ''}`} key={key} type="button" onClick={() => setSelectedDate(key)}>
+              <button className={`calendar-day ${key === selectedDate ? 'active' : ''}`} key={key} type="button" onClick={() => handleDayPick(key)}>
                 <strong>{format(day, 'd')}</strong>
                 {workout ? <span className={workout.completed ? 'dot green' : 'dot purple'} /> : null}
                 {workout && workoutVolume(workout) > 5000 ? <Flame size={11} className="flame" fill="currentColor" /> : null}
@@ -48,7 +57,7 @@ export function CalendarPage() {
           })}
         </div>
       </GlassCard>
-      <GlassCard className="day-detail" glow>
+      <GlassCard className="day-detail" glow onClick={goToWorkout} role="button" tabIndex={0}>
         <span>{format(new Date(`${selectedDate}T12:00:00`), 'EEE, MMM d, yyyy')}</span>
         <h2>{selectedWorkout?.name ?? 'Open Training Day'}</h2>
         <p>

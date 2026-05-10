@@ -1,8 +1,19 @@
 import { create } from 'zustand'
-import { addDays, formatISO } from 'date-fns'
-import { db, defaultSettings, seedDatabase } from '../db/db'
-import type { Exercise, RestTimerState, Routine, Settings, SetType, Workout, WorkoutExercise, WorkoutSet } from '../types'
-import { requestNotificationPermission } from '../utils/notifications'
+import { addDays, format, formatISO } from 'date-fns'
+import { clearAllData, db, defaultSettings, seedDatabase } from '../db/db'
+import { exerciseLibrary } from '../data/exercises'
+import { seedRoutines } from '../data/routines'
+import type {
+  Exercise,
+  RestTimerState,
+  Routine,
+  RoutineExerciseTemplate,
+  Settings,
+  SetType,
+  Workout,
+  WorkoutExercise,
+  WorkoutSet,
+} from '../types'
 
 const todayKey = () => formatISO(new Date(), { representation: 'date' })
 const id = () => crypto.randomUUID()
@@ -19,13 +30,21 @@ interface AppState {
   setSelectedDate: (date: string) => void
   shiftSelectedDate: (days: number) => void
   updateSettings: (settings: Partial<Settings>) => Promise<void>
-  createWorkoutForDate: (date: string) => Promise<Workout>
-  addExerciseToWorkout: (workoutId: string, exercise: Exercise) => Promise<void>
+  resetAllData: () => Promise<void>
+  createWorkoutForDate: (date: string, opts?: { name?: string; routineId?: string }) => Promise<Workout>
+  renameWorkout: (workoutId: string, name: string) => Promise<void>
+  completeWorkout: (workoutId: string) => Promise<void>
+  addExerciseToWorkout: (workoutId: string, exercise: Exercise, restSecondsOverride?: number) => Promise<void>
+  addRoutineToWorkout: (workoutId: string, routineId: string, options?: { skipDuplicates?: boolean }) => Promise<void>
   deleteExercise: (workoutId: string, workoutExerciseId: string) => Promise<void>
+  reorderExercises: (workoutId: string, fromIndex: number, toIndex: number) => Promise<void>
+  setExerciseRest: (workoutId: string, workoutExerciseId: string, seconds: number) => Promise<void>
   addSet: (workoutId: string, workoutExerciseId: string, set?: Partial<WorkoutSet>) => Promise<void>
   updateSet: (workoutId: string, workoutExerciseId: string, setId: string, patch: Partial<WorkoutSet>) => Promise<void>
   deleteSet: (workoutId: string, workoutExerciseId: string, setId: string) => Promise<void>
   toggleFavorite: (exerciseId: string) => Promise<void>
+  saveRoutine: (routine: Routine) => Promise<void>
+  deleteRoutine: (routineId: string) => Promise<void>
   startTimer: (seconds: number, exerciseName?: string, setLabel?: string) => void
   tickTimer: () => void
   pauseTimer: () => void
@@ -51,6 +70,32 @@ const mutateWorkout = async (
   set({ workouts: nextWorkouts })
 }
 
+const buildWorkoutExerciseFromTemplate = (
+  exercise: Exercise,
+  template?: RoutineExerciseTemplate,
+): WorkoutExercise => {
+  const setCount = Math.max(1, template?.sets ?? 1)
+  const reps = template?.reps ?? 8
+  const weight = template?.weight ?? (exercise.equipment === 'Bodyweight' ? 0 : 20)
+  const sets: WorkoutSet[] = Array.from({ length: setCount }, () => ({
+    id: id(),
+    type: 'working' as SetType,
+    weight,
+    reps,
+    completed: false,
+    createdAt: new Date().toISOString(),
+  }))
+  return {
+    id: id(),
+    exerciseId: exercise.id,
+    name: exercise.name,
+    muscleGroup: exercise.muscleGroup,
+    equipment: exercise.equipment,
+    defaultRestSeconds: exercise.defaultRestSeconds,
+    sets,
+  }
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   booted: false,
   selectedDate: todayKey(),
@@ -68,13 +113,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       db.routines.toArray(),
       db.settings.get('default'),
     ])
-    await requestNotificationPermission()
     set({
       booted: true,
       workouts,
       exercises,
       routines,
-      settings: persistedSettings ?? defaultSettings,
+      settings: persistedSettings ? { ...defaultSettings, ...persistedSettings } : defaultSettings,
     })
   },
 
@@ -90,47 +134,121 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ settings })
   },
 
-  createWorkoutForDate: async (date) => {
+  resetAllData: async () => {
+    await clearAllData()
+    await db.exercises.bulkPut(exerciseLibrary)
+    await db.routines.bulkPut(seedRoutines)
+    await db.settings.put({ id: 'default', ...defaultSettings })
+    set({
+      workouts: [],
+      exercises: [...exerciseLibrary],
+      routines: [...seedRoutines],
+      settings: defaultSettings,
+      timer: { active: false, secondsLeft: 0, totalSeconds: 0, paused: false },
+      selectedDate: todayKey(),
+    })
+  },
+
+  createWorkoutForDate: async (date, opts) => {
+    const friendly = format(new Date(`${date}T12:00:00`), 'MMM d')
     const workout: Workout = {
       id: id(),
       date,
-      name: 'Push Day',
+      name: opts?.name ?? `Workout - ${friendly}`,
       startedAt: new Date().toISOString(),
       durationSeconds: 0,
       completed: false,
       exercises: [],
+      routineId: opts?.routineId,
     }
     await saveWorkout(workout)
     set({ workouts: [...get().workouts, workout] })
     return workout
   },
 
-  addExerciseToWorkout: async (workoutId, exercise) => {
-    const workoutExercise: WorkoutExercise = {
-      id: id(),
-      exerciseId: exercise.id,
-      name: exercise.name,
-      muscleGroup: exercise.muscleGroup,
-      equipment: exercise.equipment,
-      defaultRestSeconds: exercise.defaultRestSeconds,
-      sets: [
-        {
-          id: id(),
-          type: 'working',
-          weight: exercise.equipment === 'Bodyweight' ? 0 : 20,
-          reps: 8,
-          completed: false,
-          createdAt: new Date().toISOString(),
-        },
-      ],
+  renameWorkout: async (workoutId, name) => {
+    await mutateWorkout(get, set, workoutId, (workout) => ({ ...workout, name }))
+  },
+
+  completeWorkout: async (workoutId) => {
+    await mutateWorkout(get, set, workoutId, (workout) => {
+      const startedAt = new Date(workout.startedAt)
+      const now = new Date()
+      const durationSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000)
+      return { ...workout, completed: true, durationSeconds }
+    })
+  },
+
+  addExerciseToWorkout: async (workoutId, exercise, restSecondsOverride) => {
+    const workoutExercise = buildWorkoutExerciseFromTemplate(exercise)
+    if (typeof restSecondsOverride === 'number') {
+      workoutExercise.defaultRestSeconds = restSecondsOverride
     }
-    await mutateWorkout(get, set, workoutId, (workout) => ({ ...workout, exercises: [...workout.exercises, workoutExercise] }))
+    await mutateWorkout(get, set, workoutId, (workout) => {
+      if (workout.completed) {
+        return {
+          ...workout,
+          exercises: [...workout.exercises, workoutExercise],
+          completed: false,
+          startedAt: new Date().toISOString(),
+        }
+      }
+      return { ...workout, exercises: [...workout.exercises, workoutExercise] }
+    })
+  },
+
+  addRoutineToWorkout: async (workoutId, routineId, options) => {
+    const routine = get().routines.find((item) => item.id === routineId)
+    if (!routine) return
+    const exercises = get().exercises
+    const skipDuplicates = options?.skipDuplicates ?? true
+
+    await mutateWorkout(get, set, workoutId, (workout) => {
+      const existingIds = new Set(workout.exercises.map((entry) => entry.exerciseId))
+      const additions: WorkoutExercise[] = []
+      for (const template of routine.exercises) {
+        if (skipDuplicates && existingIds.has(template.exerciseId)) continue
+        const exercise = exercises.find((item) => item.id === template.exerciseId)
+        if (!exercise) continue
+        additions.push(buildWorkoutExerciseFromTemplate(exercise, template))
+      }
+      const nextName = workout.exercises.length === 0 ? routine.name : workout.name
+      if (workout.completed) {
+        return {
+          ...workout,
+          name: nextName,
+          exercises: [...workout.exercises, ...additions],
+          routineId: routine.id,
+          completed: false,
+          startedAt: new Date().toISOString(),
+        }
+      }
+      return { ...workout, name: nextName, exercises: [...workout.exercises, ...additions], routineId: routine.id }
+    })
   },
 
   deleteExercise: async (workoutId, workoutExerciseId) => {
     await mutateWorkout(get, set, workoutId, (workout) => ({
       ...workout,
       exercises: workout.exercises.filter((exercise) => exercise.id !== workoutExerciseId),
+    }))
+  },
+
+  reorderExercises: async (workoutId, fromIndex, toIndex) => {
+    await mutateWorkout(get, set, workoutId, (workout) => {
+      const exercises = [...workout.exercises]
+      const [removed] = exercises.splice(fromIndex, 1)
+      exercises.splice(toIndex, 0, removed)
+      return { ...workout, exercises }
+    })
+  },
+
+  setExerciseRest: async (workoutId, workoutExerciseId, seconds) => {
+    await mutateWorkout(get, set, workoutId, (workout) => ({
+      ...workout,
+      exercises: workout.exercises.map((exercise) =>
+        exercise.id === workoutExerciseId ? { ...exercise, defaultRestSeconds: seconds } : exercise,
+      ),
     }))
   },
 
@@ -195,6 +313,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ exercises })
   },
 
+  saveRoutine: async (routine) => {
+    await db.routines.put(routine)
+    const existing = get().routines.find((item) => item.id === routine.id)
+    const routines = existing
+      ? get().routines.map((item) => (item.id === routine.id ? routine : item))
+      : [...get().routines, routine]
+    set({ routines })
+  },
+
+  deleteRoutine: async (routineId) => {
+    await db.routines.delete(routineId)
+    set({ routines: get().routines.filter((item) => item.id !== routineId) })
+  },
+
   startTimer: (seconds, exerciseName, setLabel) =>
     set({ timer: { active: true, paused: false, secondsLeft: seconds, totalSeconds: seconds, exerciseName, setLabel } }),
   tickTimer: () => {
@@ -208,3 +340,5 @@ export const useAppStore = create<AppState>((set, get) => ({
   addTimerSeconds: (seconds) => set({ timer: { ...get().timer, secondsLeft: Math.max(0, get().timer.secondsLeft + seconds) } }),
   skipTimer: () => set({ timer: { active: false, paused: false, secondsLeft: 0, totalSeconds: 0 } }),
 }))
+
+export const newRoutineId = () => id()

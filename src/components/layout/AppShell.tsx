@@ -1,21 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useSwipeable } from 'react-swipeable'
+import { Outlet, useLocation } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { RestTimer } from '../timer/RestTimer'
 import { useAppStore } from '../../store/useAppStore'
 import { notifyRestComplete } from '../../utils/notifications'
 
-const tabs = ['/', '/calendar', '/routines', '/exercises', '/progress']
-
 export function AppShell() {
   const location = useLocation()
-  const navigate = useNavigate()
   const boot = useAppStore((state) => state.boot)
   const booted = useAppStore((state) => state.booted)
   const tickTimer = useAppStore((state) => state.tickTimer)
   const timer = useAppStore((state) => state.timer)
+  const settings = useAppStore((state) => state.settings)
 
   useEffect(() => {
     void boot()
@@ -28,34 +25,32 @@ export function AppShell() {
 
   useEffect(() => {
     if (timer.totalSeconds > 0 && timer.secondsLeft === 0 && !timer.active) {
-      notifyRestComplete(timer.exerciseName)
+      notifyRestComplete(timer.exerciseName, {
+        sound: settings.sound,
+        vibration: settings.vibration,
+        notifications: settings.notifications,
+      })
     }
-  }, [timer.active, timer.exerciseName, timer.secondsLeft, timer.totalSeconds])
+  }, [timer.active, timer.exerciseName, timer.secondsLeft, timer.totalSeconds, settings.sound, settings.vibration, settings.notifications])
 
-  const handlers = useSwipeable({
-    onSwipedLeft: () => {
-      const index = tabs.indexOf(location.pathname)
-      if (index >= 0 && index < tabs.length - 1) navigate(tabs[index + 1])
-    },
-    onSwipedRight: () => {
-      const index = tabs.indexOf(location.pathname)
-      if (index > 0) navigate(tabs[index - 1])
-    },
-    trackTouch: true,
-  })
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.theme = settings.darkMode ? 'dark' : 'light'
+    root.dataset.color = settings.colorTheme
+  }, [settings.darkMode, settings.colorTheme])
 
   if (!booted) {
     return (
       <main className="app-frame splash-screen">
         <div className="brand-mark" />
-        <h1>StrengthLog</h1>
+        <h1>StrengthLedger</h1>
         <p>Loading your training floor...</p>
       </main>
     )
   }
 
   return (
-    <div className="app-frame" {...handlers}>
+    <div className="app-frame">
       <AnimatePresence mode="wait">
         <motion.main
           key={location.pathname}

@@ -9,6 +9,8 @@ export type MuscleGroup =
   | 'Triceps'
   | 'Core'
 
+export type ColorTheme = 'purple' | 'blue' | 'green' | 'orange' | 'red'
+
 export interface Exercise {
   id: string
   name: string
@@ -46,6 +48,14 @@ export interface Workout {
   durationSeconds: number
   completed: boolean
   exercises: WorkoutExercise[]
+  routineId?: string
+}
+
+export interface RoutineExerciseTemplate {
+  exerciseId: string
+  sets?: number
+  reps?: number
+  weight?: number
 }
 
 export interface RoutineDay {
@@ -57,10 +67,11 @@ export interface RoutineDay {
 export interface Routine {
   id: string
   name: string
-  daysPerWeek: number
-  active: boolean
-  fixedWeekdays: boolean
-  days: RoutineDay[]
+  exercises: RoutineExerciseTemplate[]
+  daysPerWeek?: number
+  active?: boolean
+  fixedWeekdays?: boolean
+  days?: RoutineDay[]
 }
 
 export interface Settings {
@@ -71,6 +82,9 @@ export interface Settings {
   darkMode: boolean
   vibration: boolean
   sound: boolean
+  notifications: boolean
+  colorTheme: ColorTheme
+  quickRestTimes: number[]
 }
 
 export interface RestTimerState {

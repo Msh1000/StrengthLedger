@@ -1,4 +1,4 @@
-import { Filter, Plus, Search, Star } from 'lucide-react'
+import { Search, Star } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { TopBar } from '../components/layout/TopBar'
 import { muscleGroups } from '../data/exercises'
@@ -14,7 +14,9 @@ export function ExercisesPage() {
   const filtered = useMemo(
     () =>
       exercises.filter((exercise) => {
-        const matchesGroup = group === 'All' || exercise.muscleGroup === (group as MuscleGroup)
+        const matchesGroup =
+          group === 'All' ||
+          (group === 'Favorites' ? Boolean(exercise.favorite) : exercise.muscleGroup === (group as MuscleGroup))
         const matchesQuery = exercise.name.toLowerCase().includes(query.toLowerCase())
         return matchesGroup && matchesQuery
       }),
@@ -24,19 +26,16 @@ export function ExercisesPage() {
   return (
     <div className="screen">
       <TopBar title="Exercises" />
-      <div className="search-row">
+      <div className="search-row single">
         <label className="search-field">
           <Search size={18} />
           <input placeholder="Search exercises..." value={query} onChange={(event) => setQuery(event.target.value)} />
         </label>
-        <button className="filter-button" type="button" aria-label="Filter">
-          <Filter size={19} />
-        </button>
       </div>
       <div className="chip-scroll">
         {muscleGroups.map((item) => (
           <button className={`filter-chip ${group === item ? 'active' : ''}`} key={item} type="button" onClick={() => setGroup(item)}>
-            {item}
+            {item === 'Favorites' ? '\u2605 Favorites' : item}
           </button>
         ))}
       </div>
@@ -44,7 +43,7 @@ export function ExercisesPage() {
         {filtered.map((exercise) => (
           <div className="library-row" key={exercise.id}>
             <span className="exercise-glyph">{exercise.name.slice(0, 1)}</span>
-            <div>
+            <div className="library-text">
               <strong>{exercise.name}</strong>
               <small>{exercise.equipment} - {exercise.muscleGroup}</small>
             </div>
@@ -53,10 +52,12 @@ export function ExercisesPage() {
             </button>
           </div>
         ))}
+        {filtered.length === 0 ? (
+          <div className="library-row" style={{ gridTemplateColumns: '1fr' }}>
+            <small>No exercises match your filters.</small>
+          </div>
+        ) : null}
       </div>
-      <button className="fab" type="button" aria-label="Add exercise">
-        <Plus size={28} />
-      </button>
     </div>
   )
 }
